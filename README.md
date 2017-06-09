@@ -2,15 +2,32 @@
 Self-Driving Car Engineer Nanodegree Program
 
 ---
+#### ScreenShot of car running on road with MPC controller:
+![alt text](./ScreenShot.png)
 
 ## The Model
 
-Student describes their model in detail. This includes the state, actuators and update equations.
+The model has state: [x, y, ψ, v, cte, epsi] and actuators: [delta, a].
+
+Update from t-1 to t:
+
+x_[t] = x[t-1] + v[t-1] * cos(psi[t-1]) * dt
+
+y_[t] = y[t-1] + v[t-1] * sin(psi[t-1]) * dt
+
+psi_[t] = psi[t-1] + v[t-1] / Lf * delta[t-1] * dt
+
+v_[t] = v[t-1] + a[t-1] * dt
+
+cte[t] = fitted_y - y[t-1] + v[t-1] * sin(epsi[t-1]) * dt
+
+epsi[t] = psi[t] - psides[t-1] + v[t-1] * delta[t-1] / Lf * dt
+
 
 ## Timestep Length and Elapsed Duration (N & dt)
 
 I chose 10 at the beginning for slower speed like 30 mph. For higher speed like 60, 10 was too small to obtain
-accurate optimized trajectory. I used 25 for higher speed.
+accurate optimized trajectory. I used 30 for higher speed. And also I used smaller dt for higher speed since higher speed brings longer distance which sometimes gives incorrect fitted polynomial. From the incorrect polynomial, the predicted steering is wrong. To compensate this, I increased N, decreased dt and increased the weight on difference of delta between two time steps. Finally, my controller successfully ran on the road with maximum speed of 66 mph.
 
 ## Polynomial Fitting and MPC Preprocessing
 
@@ -19,26 +36,7 @@ A three-degree polynomial is fitted to waypoints. Before fitting, I transformed 
 
 ## Model Predictive Control with Latency
 
-
-          double latency = 0.1; // 100 milliseconds
-          double Lf = 2.67;
-          double steer_current = j[1]["steering_angle"];
-          double a_current = j[1]["throttle"];
-
-          double x_latency = v*std::cos(steer_current)*latency;
-          double y_latency = -v*std::sin(steer_current)*latency;
-          double psi_latency = -(v/Lf)*steer_current*latency;
-          double v_latency = v + steer_current*latency;
-          double cte_latency = cte + v * sin(epsi) * latency;
-
-          // Compute the expected heading based on fit.
-          double psi_expected = atan(coeffs[1] +
-                                2.0 * coeffs[2] * x_latency +
-                                3.0 * coeffs[3] * x_latency * x_latency);
-
-          // Compute the latent heading error.
-          double epsi_latency = psi - psi_latency;
-
+For 100 milliseconds latency, I added the influence of this time delay on every state variable. I computed the new delayed state after this latency as the initial state to be optimized.
 
 
 
