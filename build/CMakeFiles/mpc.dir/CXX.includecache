@@ -1209,6 +1209,8 @@ MPC.h
 /Users/LuQiang/Dropbox/Self-Driving Car NanoDegree-----UDACITY/Term-2/CarND-MPC-Project/src/MPC.h
 json.hpp
 /Users/LuQiang/Dropbox/Self-Driving Car NanoDegree-----UDACITY/Term-2/CarND-MPC-Project/src/json.hpp
+cppad/cppad.hpp
+-
 
 /usr/local/include/boost/array.hpp
 boost/detail/workaround.hpp

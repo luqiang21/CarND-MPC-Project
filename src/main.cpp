@@ -8,6 +8,7 @@
 #include "Eigen-3.3/Eigen/QR"
 #include "MPC.h"
 #include "json.hpp"
+#include <cppad/cppad.hpp>
 
 // for convenience
 using json = nlohmann::json;
@@ -92,14 +93,75 @@ int main() {
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
 
+
+          //Display the MPC predicted trajectory
+          vector<double> mpc_x_vals;
+          vector<double> mpc_y_vals;
+
+          //Display the waypoints/reference line, car coordinate
+          vector<double> next_x_vals;
+          vector<double> next_y_vals;
+
+
           /*
           * TODO: Calculate steering angle and throttle using MPC.
           *
           * Both are in between [-1, 1].
           *
           */
+          vector<double> ptsx_car;
+                              vector<double> ptsy_car;
+          // Transform waypoints coordinates from global frame to vehicle frame
+          for (int i=0; i < ptsx.size(); i++) {
+            // shift
+            double x = ptsx[i] - px;
+            double y = ptsy[i] - py;
+
+            ptsx_car.push_back(x * cos(-psi) - y * sin(-psi));
+            ptsy_car.push_back(x * sin(-psi) + y * cos(-psi));
+            // rotate, note the angle
+            ptsx[i] = x * cos(psi) + y * sin(psi);
+            ptsy[i] = -x * sin(psi) + y * cos(psi);
+
+            next_x_vals.push_back(x);
+            next_y_vals.push_back(y);
+
+
+          }
+
+          // convert data format
+          Eigen::VectorXd next_x_vals_Xd(next_x_vals.size());
+          Eigen::VectorXd next_y_vals_Xd(next_y_vals.size());
+          for (int i=0; i<ptsx.size(); i++) {
+            next_x_vals_Xd[i] = next_x_vals[i];
+            next_y_vals_Xd[i] = next_y_vals[i];
+          }
+
+          // fit
+          auto coeffs = polyfit(next_x_vals_Xd, next_y_vals_Xd, 3);
+
+          // cte = polyeval(coeffs, px) - py = polyeval(coeffs, 0);
+          // epsi = -CppAD::atan(coeffs[1] + 2 * px * coeffs[2] + 3 * px * px * coeffs[3])
+          // = -CppAD::atan(coeffs[1]) since px = 0, py = 0.
+          double cte = polyeval(coeffs, 0) ;
+          double epsi = -CppAD::atan(coeffs[1]);
+
+          //create a state vector to store state values.
+          Eigen::VectorXd state(6);
+          // Initial px, py ,psi are 0;
+          // Using the state after 100ms to handle 100ms latency: px = px + v * 0.1 (s)
+          state << v*0.1, 0, 0, v, cte, epsi;
+
+          // solve the optimization problem
+          auto solution = mpc.Solve(state, coeffs, mpc_x_vals, mpc_y_vals);
+
           double steer_value;
           double throttle_value;
+
+
+
+          steer_value = solution[0];// negative???
+          throttle_value = solution[1];
 
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
@@ -107,9 +169,6 @@ int main() {
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = throttle_value;
 
-          //Display the MPC predicted trajectory 
-          vector<double> mpc_x_vals;
-          vector<double> mpc_y_vals;
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
@@ -117,15 +176,12 @@ int main() {
           msgJson["mpc_x"] = mpc_x_vals;
           msgJson["mpc_y"] = mpc_y_vals;
 
-          //Display the waypoints/reference line
-          vector<double> next_x_vals;
-          vector<double> next_y_vals;
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
 
-          msgJson["next_x"] = next_x_vals;
-          msgJson["next_y"] = next_y_vals;
+          msgJson["next_x"] = ptsx; //next_x_vals;
+          msgJson["next_y"] = ptsy; //next_y_vals;
 
 
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
