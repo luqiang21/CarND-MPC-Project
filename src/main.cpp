@@ -134,28 +134,48 @@ int main() {
             next_y_vals_Xd[i] = next_y_vals[i];
           }
 
-          // fit
+          // Fit
           auto coeffs = polyfit(next_x_vals_Xd, next_y_vals_Xd, 3);
 
+          // compute initial cte and epsi
           // cte = polyeval(coeffs, px) - py = polyeval(coeffs, 0);
           // epsi = -CppAD::atan(coeffs[1] + 2 * px * coeffs[2] + 3 * px * px * coeffs[3])
           // = -CppAD::atan(coeffs[1]) since px = 0, py = 0.
           double cte = polyeval(coeffs, 0) ;
           double epsi = -CppAD::atan(coeffs[1]);
 
-          //create a state vector to store state values.
+          // Create a state vector to store state values.
           Eigen::VectorXd state(6);
           // Initial px, py ,psi are 0;
           // Using the state after 100ms to handle 100ms latency: px = px + v * 0.1 (s)
-          state << v*0.1, 0, 0, v, cte, epsi;
+
+          double latency = 0.1; // 100 milliseconds
+          double Lf = 2.67;
+          double steer_current = j[1]["steering_angle"];
+          double a_current = j[1]["throttle"];
+
+          double x_latency = v*std::cos(steer_current)*latency;
+          double y_latency = -v*std::sin(steer_current)*latency;
+          double psi_latency = -(v/Lf)*steer_current*latency;
+          double v_latency = v + steer_current*latency;
+          double cte_latency = cte + v * sin(epsi) * latency;
+
+          // Compute the expected heading based on fit.
+          double psi_expected = atan(coeffs[1] +
+                                2.0 * coeffs[2] * x_latency +
+                                3.0 * coeffs[3] * x_latency * x_latency);
+
+          // Compute the latent heading error.
+          double epsi_latency = psi - psi_latency;
+
+          state << x_latency, y_latency, psi_latency, v_latency, cte_latency, epsi_latency;
 
           // solve the optimization problem
           auto solution = mpc.Solve(state, coeffs, mpc_x_vals, mpc_y_vals);
 
+          // store the optimal steering and throttle values
           double steer_value;
           double throttle_value;
-
-
 
           steer_value = solution[0];//
           throttle_value = solution[1];

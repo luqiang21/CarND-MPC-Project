@@ -3,6 +3,48 @@ Self-Driving Car Engineer Nanodegree Program
 
 ---
 
+## The Model
+
+Student describes their model in detail. This includes the state, actuators and update equations.
+
+## Timestep Length and Elapsed Duration (N & dt)
+
+I chose 10 at the beginning for slower speed like 30 mph. For higher speed like 60, 10 was too small to obtain
+accurate optimized trajectory. I used 25 for higher speed.
+
+## Polynomial Fitting and MPC Preprocessing
+
+A three-degree polynomial is fitted to waypoints. Before fitting, I transformed the waypoints from global coordinate to car coordinate. This is easy to show the reference trajectory in the simulator and compare it with predicted trajectory.
+
+
+## Model Predictive Control with Latency
+
+
+          double latency = 0.1; // 100 milliseconds
+          double Lf = 2.67;
+          double steer_current = j[1]["steering_angle"];
+          double a_current = j[1]["throttle"];
+
+          double x_latency = v*std::cos(steer_current)*latency;
+          double y_latency = -v*std::sin(steer_current)*latency;
+          double psi_latency = -(v/Lf)*steer_current*latency;
+          double v_latency = v + steer_current*latency;
+          double cte_latency = cte + v * sin(epsi) * latency;
+
+          // Compute the expected heading based on fit.
+          double psi_expected = atan(coeffs[1] +
+                                2.0 * coeffs[2] * x_latency +
+                                3.0 * coeffs[3] * x_latency * x_latency);
+
+          // Compute the latent heading error.
+          double epsi_latency = psi - psi_latency;
+
+
+
+
+
+---
+
 ## Dependencies
 
 * cmake >= 3.5
@@ -19,7 +61,7 @@ Self-Driving Car Engineer Nanodegree Program
   * Run either `install-mac.sh` or `install-ubuntu.sh`.
   * If you install from source, checkout to commit `e94b6e1`, i.e.
     ```
-    git clone https://github.com/uWebSockets/uWebSockets 
+    git clone https://github.com/uWebSockets/uWebSockets
     cd uWebSockets
     git checkout e94b6e1
     ```
@@ -31,7 +73,7 @@ Self-Driving Car Engineer Nanodegree Program
   * Mac: `brew install ipopt`
   * Linux
     * You will need a version of Ipopt 3.12.1 or higher. The version available through `apt-get` is 3.11.x. If you can get that version to work great but if not there's a script `install_ipopt.sh` that will install Ipopt. You just need to download the source from the Ipopt [releases page](https://www.coin-or.org/download/source/Ipopt/) or the [Github releases](https://github.com/coin-or/Ipopt/releases) page.
-    * Then call `install_ipopt.sh` with the source directory as the first argument, ex: `bash install_ipopt.sh Ipopt-3.12.1`. 
+    * Then call `install_ipopt.sh` with the source directory as the first argument, ex: `bash install_ipopt.sh Ipopt-3.12.1`.
   * Windows: TODO. If you can use the Linux subsystem and follow the Linux instructions.
 * [CppAD](https://www.coin-or.org/CppAD/)
   * Mac: `brew install cppad`
