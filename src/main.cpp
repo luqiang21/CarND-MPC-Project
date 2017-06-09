@@ -109,22 +109,19 @@ int main() {
           * Both are in between [-1, 1].
           *
           */
-          vector<double> ptsx_car;
-                              vector<double> ptsy_car;
+
           // Transform waypoints coordinates from global frame to vehicle frame
           for (int i=0; i < ptsx.size(); i++) {
             // shift
             double x = ptsx[i] - px;
             double y = ptsy[i] - py;
 
-            ptsx_car.push_back(x * cos(-psi) - y * sin(-psi));
-            ptsy_car.push_back(x * sin(-psi) + y * cos(-psi));
             // rotate, note the angle
             ptsx[i] = x * cos(psi) + y * sin(psi);
             ptsy[i] = -x * sin(psi) + y * cos(psi);
 
-            next_x_vals.push_back(x);
-            next_y_vals.push_back(y);
+            next_x_vals.push_back(ptsx[i]);
+            next_y_vals.push_back(ptsy[i]);
 
 
           }
@@ -160,7 +157,7 @@ int main() {
 
 
 
-          steer_value = solution[0];// negative???
+          steer_value = solution[0];//
           throttle_value = solution[1];
 
           json msgJson;
@@ -180,8 +177,8 @@ int main() {
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
 
-          msgJson["next_x"] = ptsx; //next_x_vals;
-          msgJson["next_y"] = ptsy; //next_y_vals;
+          msgJson["next_x"] = ptsx;
+          msgJson["next_y"] = ptsy; 
 
 
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
